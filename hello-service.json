@@ -1,9 +1,0 @@
-{"method":"ServiceManager.AddService","params":[{
-  "id": "hello",
-  "selector": {
-    "environment": "production"
-  },
-  "containerPort": "80",
-  "protocol": "tcp",
-  "port": "5000"
-}], "id": 0}

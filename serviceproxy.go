@@ -22,6 +22,9 @@ type Service struct {
 	Selector      map[string]string `json:"selector"`
 }
 
+type AddReply struct {
+}
+
 type ServiceManager struct {
 	mu sync.Mutex
 	m  map[string]*ServiceProxy
@@ -32,20 +35,24 @@ func newServiceManager() *ServiceManager {
 	return &ServiceManager{m: m}
 }
 
-func (sm *ServiceManager) AddService(args *Service, reply *int) error {
+func (sm *ServiceManager) Add(args *Service, reply *string) error {
 	if err := sm.add(args); err != nil {
 		log.Println(err)
-		*reply = 1
 		return err
 	}
-	*reply = 1
-	log.Println("AddService called")
+	*reply = net.JoinHostPort(bindIP, args.Port)
+	log.Println("new service added", args)
 	return nil
 }
 
 func (sm *ServiceManager) add(service *Service) error {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
+	if _, ok := sm.m[service.ID]; ok {
+		err := fmt.Errorf("service %s already exist", service.ID)
+		log.Println(err)
+		return err
+	}
 	sp := newServiceProxy(service)
 	err := sp.start()
 	if err != nil {
