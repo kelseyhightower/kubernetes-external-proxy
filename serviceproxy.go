@@ -35,12 +35,15 @@ func newServiceManager() *ServiceManager {
 func (sm *ServiceManager) AddService(args *Service, reply *int) error {
 	log.Println("AddService called")
 	/*
-	if err := sm.add(args); err != nil {
+		if err := sm.add(args); err != nil {
+			*reply = 1
+			return err
+		}
+	*/
+	if err := sm.hello("foo"); err != nil {
 		*reply = 1
 		return err
 	}
-	*/
-	sm.hello("foo")
 	log.Println("got this far")
 	// Never makes it to here, unless I remove the call the sm.add.
 	// but the call to sm.add seems to work without error.
@@ -48,8 +51,9 @@ func (sm *ServiceManager) AddService(args *Service, reply *int) error {
 	return nil
 }
 
-func (sm *ServiceManager) hello(s string) {
+func (sm *ServiceManager) hello(s string) error {
 	log.Println(s)
+	return nil
 }
 
 func (sm *ServiceManager) add(service *Service) error {
