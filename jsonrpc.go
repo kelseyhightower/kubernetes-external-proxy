@@ -29,12 +29,12 @@ func (r *rpcRequest) Read(p []byte) (n int, err error) {
 // Write implements the io.ReadWriteCloser Write method.
 func (r *rpcRequest) Write(p []byte) (n int, err error) {
 	n, err = r.rw.Write(p)
+	r.done <- true
 	return n, err
 }
 
 // Close implements the io.ReadWriteCloser Close method.
 func (r *rpcRequest) Close() error {
-	r.done <- true
 	return nil
 }
 

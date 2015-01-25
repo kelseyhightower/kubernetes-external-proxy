@@ -33,14 +33,13 @@ func newServiceManager() *ServiceManager {
 }
 
 func (sm *ServiceManager) AddService(args *Service, reply *int) error {
-	log.Println("AddService called")
 	if err := sm.add(args); err != nil {
+		log.Println(err)
 		*reply = 1
 		return err
 	}
-	// Never makes it to here, unless I remove the call the sm.add.
-	// but the call to sm.add seems to work without error.
-	*reply = 0
+	*reply = 1
+	log.Println("AddService called")
 	return nil
 }
 
@@ -78,15 +77,18 @@ func (sp *ServiceProxy) start() error {
 	if err != nil {
 		return err
 	}
-	for {
-		conn, err := ln.Accept()
-		if err != nil {
-			log.Printf("error accepting connections for serviceID %s", sp.service.ID)
-			time.Sleep(time.Duration(10 * time.Second))
-			continue
+	go func() {
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				log.Printf("error accepting connections for serviceID %s", sp.service.ID)
+				time.Sleep(time.Duration(10 * time.Second))
+				continue
+			}
+			go sp.handleConnection(conn)
 		}
-		go sp.handleConnection(conn)
-	}
+	}()
+	return nil
 }
 
 func (sp *ServiceProxy) updatePods() error {
