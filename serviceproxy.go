@@ -53,7 +53,7 @@ func (sm *ServiceManager) AddService(args *Service, reply *int) error {
 
 func (sm *ServiceManager) hello(s string) error {
 	log.Println(s)
-	return nil
+	return errors.New("make it fail")
 }
 
 func (sm *ServiceManager) add(service *Service) error {
