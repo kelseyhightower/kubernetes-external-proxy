@@ -23,8 +23,8 @@ type Service struct {
 }
 
 type ServiceManager struct {
-	sync.Mutex
-	m map[string]*ServiceProxy
+	mu sync.Mutex
+	m  map[string]*ServiceProxy
 }
 
 func newServiceManager() *ServiceManager {
@@ -32,16 +32,29 @@ func newServiceManager() *ServiceManager {
 	return &ServiceManager{m: m}
 }
 
-func (sm *ServiceManager) add(service *Service) {
-	sm.Lock()
-	defer sm.Unlock()
+func (sm *ServiceManager) AddService(args *Service, reply *int) error {
+	log.Println("AddService called")
+	if err := sm.add(args); err != nil {
+		*reply = 1
+		return err
+	}
+	// Never makes it to here, unless I remove the call the sm.add.
+	// but the call to sm.add seems to work without error.
+	*reply = 0
+	return nil
+}
+
+func (sm *ServiceManager) add(service *Service) error {
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
 	sp := newServiceProxy(service)
 	err := sp.start()
 	if err != nil {
 		log.Printf("error adding service %s: %v\n", service.ID, err)
-		return
+		return err
 	}
 	sm.m[service.ID] = sp
+	return nil
 }
 
 type ServiceProxy struct {

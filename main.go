@@ -1,9 +1,11 @@
 package main
 
 import (
+	"io"
 	"log"
 	"net"
 	"net/http"
+	"net/rpc"
 	"os"
 )
 
@@ -23,15 +25,16 @@ func main() {
 		bindIP = "0.0.0.0"
 	}
 	sm := newServiceManager()
-	service := &Service{
-		ID:            "hello",
-		ContainerPort: "80",
-		Protocol:      "tcp",
-		Port:          "5000",
-		Selector:      map[string]string{"environment": "prod"},
-	}
-	sm.add(service)
-
+	rpc.Register(sm)
+	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+		defer req.Body.Close()
+		w.Header().Set("Content-Type", "application/json")
+		res := NewRPCRequest(req.Body).Call()
+		_, err := io.Copy(w, res)
+		if err != nil {
+			log.Println(err)
+		}
+	})
 	hostPort := net.JoinHostPort(bindIP, "8000")
 	log.Fatal(http.ListenAndServe(hostPort, nil))
 }

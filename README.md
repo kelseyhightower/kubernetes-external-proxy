@@ -13,3 +13,7 @@ export KUBERNETES_API_SERVER="http://192.168.12.20:8080"
 ```
 kubernetes-external-proxy
 ```
+
+```
+curl -i -d @hello-service.json http://127.0.0.1:8000
+```
