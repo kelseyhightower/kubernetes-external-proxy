@@ -4,6 +4,7 @@ import (
 	"container/ring"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -22,20 +23,19 @@ type Service struct {
 }
 
 type ServiceManager struct {
-	bindIP string
 	sync.Mutex
 	m map[string]*ServiceProxy
 }
 
-func newServiceManager(bindIP string) *ServiceManager {
+func newServiceManager() *ServiceManager {
 	m := make(map[string]*ServiceProxy)
-	return &ServiceManager{bindIP: bindIP, m: m}
+	return &ServiceManager{m: m}
 }
 
 func (sm *ServiceManager) add(service *Service) {
 	sm.Lock()
 	defer sm.Unlock()
-	sp := newServiceProxy(sm.bindIP, service)
+	sp := newServiceProxy(service)
 	err := sp.start()
 	if err != nil {
 		log.Printf("error adding service %s: %v\n", service.ID, err)
@@ -45,15 +45,14 @@ func (sm *ServiceManager) add(service *Service) {
 }
 
 type ServiceProxy struct {
-	bindIP  string
 	service *Service
 	sync.Mutex
 	pods []string
 	r    *ring.Ring
 }
 
-func newServiceProxy(bindIP string, service *Service) *ServiceProxy {
-	return &ServiceProxy{bindIP: bindIP, service: service}
+func newServiceProxy(service *Service) *ServiceProxy {
+	return &ServiceProxy{service: service}
 }
 
 func (sp *ServiceProxy) start() error {
@@ -61,7 +60,7 @@ func (sp *ServiceProxy) start() error {
 		return err
 	}
 
-	hostPort := net.JoinHostPort(sp.bindIP, sp.service.Port)
+	hostPort := net.JoinHostPort(bindIP, sp.service.Port)
 	ln, err := net.Listen(sp.service.Protocol, hostPort)
 	if err != nil {
 		return err
@@ -131,7 +130,7 @@ func copyData(in, out net.Conn, wg *sync.WaitGroup) {
 
 func podsFromLabelQuery(selector map[string]string) ([]string, error) {
 	var pods []string
-	resp, err := http.Get("http://192.168.12.20:8080/api/v1beta1/pods?labels=environment=prod")
+	resp, err := http.Get(fmt.Sprintf("%s/api/v1beta1/pods?labels=environment=prod", apiserver))
 	if err != nil {
 		return nil, err
 	}
