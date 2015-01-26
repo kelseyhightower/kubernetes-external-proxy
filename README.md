@@ -14,7 +14,9 @@ export KUBERNETES_API_SERVER="http://192.168.12.20:8080"
 kubernetes-external-proxy
 ```
 
-### Create a service request
+### Add a service 
+
+Create a service request
 
 ```
 {
@@ -34,4 +36,22 @@ kubernetes-external-proxy
 
 ```
 curl -i -d @hello-service.json http://127.0.0.1:8000
+```
+
+### Delete a service
+
+```
+{
+    "method": "ServiceManager.Del",
+    "params":["hello"],
+    "id": 0
+}
+```
+
+```
+curl -i -d @delete-hello-service.json http://127.0.0.1:8000
+```
+
+```
+{"id":0,"result":true,"error":null}
 ```

@@ -10,6 +10,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -20,9 +21,6 @@ type Service struct {
 	Protocol      string            `json:"protocol"`
 	Port          string            `json:"port"`
 	Selector      map[string]string `json:"selector"`
-}
-
-type AddReply struct {
 }
 
 type ServiceManager struct {
@@ -45,6 +43,16 @@ func (sm *ServiceManager) Add(args *Service, reply *string) error {
 	return nil
 }
 
+func (sm *ServiceManager) Del(args *string, reply *bool) error {
+	if err := sm.del(*args); err != nil {
+		log.Println(err)
+		return err
+	}
+	*reply = true
+	log.Println("service service deleted", args)
+	return nil
+}
+
 func (sm *ServiceManager) add(service *Service) error {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
@@ -63,15 +71,37 @@ func (sm *ServiceManager) add(service *Service) error {
 	return nil
 }
 
+func (sm *ServiceManager) del(id string) error {
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+	if v, ok := sm.m[id]; ok {
+		delete(sm.m, id)
+		if err := v.stop(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (sp *ServiceProxy) stop() error {
+	sp.shutdown <- true
+	<-sp.done
+	return nil
+}
+
 type ServiceProxy struct {
-	service *Service
+	service  *Service
+	shutdown chan bool
+	done     chan bool
 	sync.Mutex
 	pods []string
 	r    *ring.Ring
 }
 
 func newServiceProxy(service *Service) *ServiceProxy {
-	return &ServiceProxy{service: service}
+	shutdown := make(chan bool)
+	done := make(chan bool)
+	return &ServiceProxy{done: done, shutdown: shutdown, service: service}
 }
 
 func (sp *ServiceProxy) start() error {
@@ -84,15 +114,31 @@ func (sp *ServiceProxy) start() error {
 	if err != nil {
 		return err
 	}
+
+	var shutdown bool
 	go func() {
+		log.Printf("accepting new connections for %s service", sp.service.ID)
 		for {
+			if shutdown {
+				log.Println("stopping service:", sp.service.ID)
+				sp.done <- true
+				return
+			}
 			conn, err := ln.Accept()
 			if err != nil {
 				log.Printf("error accepting connections for serviceID %s", sp.service.ID)
-				time.Sleep(time.Duration(10 * time.Second))
+				time.Sleep(time.Duration(5 * time.Second))
 				continue
 			}
 			go sp.handleConnection(conn)
+		}
+	}()
+	go func() {
+		select {
+		case <-sp.shutdown:
+			shutdown = true
+			log.Println("stopping service:", sp.service.ID)
+			ln.Close()
 		}
 	}()
 	return nil
@@ -118,12 +164,20 @@ func (sp *ServiceProxy) updatePods() error {
 func (sp *ServiceProxy) nextPod() string {
 	sp.Lock()
 	sp.Unlock()
+	if sp.r == nil {
+		return ""
+	}
 	sp.r = sp.r.Next()
 	return net.JoinHostPort(sp.r.Value.(string), sp.service.ContainerPort)
 }
 
 func (sp *ServiceProxy) handleConnection(conn net.Conn) {
 	hostPort := sp.nextPod()
+	if hostPort == "" {
+		log.Printf("error cannot service request for %s: no pods available", sp.service.ID)
+		conn.Close()
+		return
+	}
 	proxyConn, err := net.Dial(sp.service.Protocol, hostPort)
 	if err != nil {
 		log.Println(err)
@@ -152,7 +206,15 @@ func copyData(in, out net.Conn, wg *sync.WaitGroup) {
 
 func podsFromLabelQuery(selector map[string]string) ([]string, error) {
 	var pods []string
-	resp, err := http.Get(fmt.Sprintf("%s/api/v1beta1/pods?labels=environment=prod", apiserver))
+
+	labels := []string{}
+	for k, v := range selector {
+		labels = append(labels, fmt.Sprintf("%s=%s", k, v))
+	}
+
+	u := fmt.Sprintf("%s/api/v1beta1/pods?labels=%s", apiserver, strings.Join(labels, ","))
+	log.Println(u)
+	resp, err := http.Get(u)
 	if err != nil {
 		return nil, err
 	}
