@@ -7,7 +7,7 @@ Currently a work in progress.
 ## Usage
 
 ```
-export KUBERNETES_API_SERVER="http://192.168.12.20:8080"
+export KUBERNETES_API_SERVER="192.168.12.20:8080"
 ```
 
 ```

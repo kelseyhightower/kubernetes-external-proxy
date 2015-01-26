@@ -10,6 +10,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -78,7 +79,6 @@ func (sp *ServiceProxy) start() error {
 		select {
 		case <-sp.shutdown:
 			shutdown = true
-			log.Println("stopping service:", sp.service.ID)
 			ln.Close()
 		}
 	}()
@@ -159,13 +159,21 @@ func podsFromLabelQuery(selector map[string]string) ([]string, error) {
 		labels = append(labels, fmt.Sprintf("%s=%s", k, v))
 	}
 
-	u := fmt.Sprintf("%s/api/v1beta1/pods?labels=%s", apiserver, strings.Join(labels, ","))
-	log.Println(u)
-	resp, err := http.Get(u)
+	u := &url.URL{Scheme: "http", Path: "/api/v1beta1/pods", Host: apiserver}
+	q := u.Query()
+	q.Set("labels", strings.Join(labels, ","))
+	u.RawQuery = q.Encode()
+
+	req := &http.Request{Method: "GET", URL: u}
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		log.Println("error retrieving pods:", err)
+		return nil, errors.New("error retrieving pods")
 	}
+
 	if resp.StatusCode != http.StatusOK {
+		log.Printf("error retrieving pods from %s", u)
 		return nil, errors.New("non 200 status code")
 	}
 	data, err := ioutil.ReadAll(resp.Body)
