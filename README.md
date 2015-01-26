@@ -38,6 +38,10 @@ Create a service request
 curl -i -d @hello-service.json http://127.0.0.1:8000
 ```
 
+```
+{"id":0,"result":"0.0.0.0:5000","error":null}
+```
+
 ### Delete a service
 
 ```
