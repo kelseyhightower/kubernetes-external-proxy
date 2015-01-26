@@ -36,5 +36,7 @@ func main() {
 		}
 	})
 	hostPort := net.JoinHostPort(bindIP, "8000")
+	log.Println("starting kubernetes-external-proxy service...")
+	log.Printf("accepting RPC request on http://%s", hostPort)
 	log.Fatal(http.ListenAndServe(hostPort, nil))
 }

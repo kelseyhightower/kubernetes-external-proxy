@@ -51,21 +51,28 @@ func (sp *ServiceProxy) start() error {
 
 	var shutdown bool
 	go func() {
-		log.Printf("accepting new connections for %s service", sp.service.ID)
+		log.Printf("accepting new connections for the %s service", sp.service.ID)
+		log.Printf("proxy established %s <-> %s", sp.service.Port, sp.service.ContainerPort)
 		for {
 			if shutdown {
-				log.Println("stopping service:", sp.service.ID)
-				sp.done <- true
-				return
+				goto Shutdown
 			}
 			conn, err := ln.Accept()
 			if err != nil {
-				log.Printf("error accepting connections for serviceID %s", sp.service.ID)
+				if shutdown {
+					goto Shutdown
+				}
+				log.Printf("error accepting connections for service: %s", sp.service.ID)
 				time.Sleep(time.Duration(5 * time.Second))
 				continue
 			}
 			go sp.handleConnection(conn)
 		}
+
+	Shutdown:
+		log.Printf("stopping the %s service...", sp.service.ID)
+		sp.done <- true
+		return
 	}()
 	go func() {
 		select {
