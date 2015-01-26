@@ -4,6 +4,12 @@ This will provide an external service proxy for Kubernetes Pods discovered via l
 
 Currently a work in progress.
 
+## Installation
+
+```
+go install github.com/kelseyhightower/kubernetes-external-proxy
+```
+
 ## Usage
 
 ```
