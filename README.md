@@ -12,9 +12,13 @@ go install github.com/kelseyhightower/kubernetes-external-proxy
 
 ## Usage
 
+Configure the server:
+
 ```
 export KUBERNETES_API_SERVER="192.168.12.20:8080"
 ```
+
+Start the server:
 
 ```
 kubernetes-external-proxy
