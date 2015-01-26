@@ -22,7 +22,7 @@ kubernetes-external-proxy
 
 ### Add a service 
 
-Create a service request
+Create an add service RPC request:
 
 ```
 {
@@ -41,7 +41,7 @@ Create a service request
 ```
 
 ```
-curl -i -d @hello-service.json http://127.0.0.1:8000
+curl -i -d @add-hello-service.json http://127.0.0.1:8000
 ```
 
 ```
@@ -49,6 +49,8 @@ curl -i -d @hello-service.json http://127.0.0.1:8000
 ```
 
 ### Delete a service
+
+Create a delete service RPC request:
 
 ```
 {
